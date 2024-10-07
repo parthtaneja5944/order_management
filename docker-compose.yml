@@ -1,0 +1,147 @@
+version: '3.8'
+
+services:
+  rabbitmq:
+    image: "rabbitmq:3-management"
+    container_name: rabbitmq
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    networks:
+      - backend
+    environment:
+      RABBITMQ_DEFAULT_USER: user
+      RABBITMQ_DEFAULT_PASS: user 
+    healthcheck:
+      test: ["CMD", "rabbitmqctl", "status"]
+      interval: 30s
+      timeout: 10s
+      retries: 5  
+
+  user_service:
+    build:
+      context: ./user_service
+      dockerfile: DockerFile
+    container_name: user_service
+    environment:
+      - DATABASE_URL=postgresql://user_model_admin:user_model_admin@user_db:5432/user_model
+    depends_on:
+      user_db:
+        condition: service_started
+      rabbitmq:
+        condition: service_healthy
+    volumes:
+      - ./user_service:/usr/src/app 
+    ports:
+      - "5001:5000"
+    networks:
+      - backend
+
+  product_service:
+    build:
+      context: ./product_service
+      dockerfile: DockerFile
+    container_name: product_service
+    environment:
+      - DATABASE_URL=postgresql://product_model_admin:product_model_admin@product_db:5432/product_model
+    depends_on:
+      product_db:
+        condition: service_started
+      rabbitmq:
+        condition: service_healthy
+    volumes:
+      - ./product_service:/usr/src/app 
+    ports:
+      - "5002:5000"
+    networks:
+      - backend
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "product_model_admin"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+  order_service:
+    build:
+      context: ./order_service
+      dockerfile: DockerFile
+    container_name: order_service
+    environment:
+      - DATABASE_URL=postgresql://order_model_admin:order_model_admin@order_db:5432/order_model
+    depends_on:
+      order_db:
+        condition: service_started
+      rabbitmq:
+        condition: service_healthy
+    volumes:
+      - ./order_service:/usr/src/app 
+    ports:
+      - "5003:5000"
+    networks:
+      - backend
+
+  graphql_service:
+    build:
+      context: ./api_gateway
+      dockerfile: DockerFile
+    container_name: api_gateway
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+    volumes:
+      - ./api_gateway:/usr/src/app 
+    ports:
+      - "6001:6000"
+    networks:
+      - backend
+
+  user_db:
+    image: postgres:13
+    container_name: user_db
+    environment:
+      POSTGRES_USER: user_model_admin
+      POSTGRES_PASSWORD: user_model_admin
+      POSTGRES_DB: user_model
+    ports:
+      - "5433:5432"
+    volumes:
+      - user_db_data:/var/lib/postgresql/data 
+    networks:
+      - backend
+
+  product_db:
+    image: postgres:13
+    container_name: product_db
+    environment:
+      POSTGRES_USER: product_model_admin
+      POSTGRES_PASSWORD: product_model_admin
+      POSTGRES_DB: product_model
+    ports:
+      - "5434:5432"
+    volumes:
+      - product_db_data:/var/lib/postgresql/data 
+    networks:
+      - backend
+
+  order_db:
+    image: postgres:13
+    container_name: order_db
+    environment:
+      POSTGRES_USER: order_model_admin
+      POSTGRES_PASSWORD: order_model_admin
+      POSTGRES_DB: order_model
+    ports:
+      - "5435:5432"
+    volumes:
+      - order_db_data:/var/lib/postgresql/data 
+    networks:
+      - backend
+
+volumes:
+  user_db_data:
+  product_db_data:
+  order_db_data:
+
+networks:
+  backend:
+    driver: bridge

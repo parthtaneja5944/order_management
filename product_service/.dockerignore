@@ -1,0 +1,7 @@
+productvenv/
+__pycache__/
+*.pyc
+*.pyo
+.git/
+migrations/
+DockerFile

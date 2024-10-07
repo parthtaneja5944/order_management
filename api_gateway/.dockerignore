@@ -1,0 +1,6 @@
+apivenv/
+__pycache__/
+*.pyc
+*.pyo
+.git/
+DockerFile
