@@ -43,7 +43,8 @@ This service acts as a gateway that consolidates data from multiple microservice
 1. Build and run the Docker container:
 
     ```bash
-    docker-compose up --build
+    docker compose build
+    docker compose up
     ```
 
     The service will now be available at:
